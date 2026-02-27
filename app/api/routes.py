@@ -1,28 +1,23 @@
 from fastapi import APIRouter, Request
 from app.schemas.input import InputSchema
-from app.schemas.report import ReportSchema, RuleResultSchema, SummarySchema
+from app.schemas.report import ReportSchema
 from app.services.validation import validate_data
+from app.services.report_builder import ReportBuilder
+from app.core.security import validate_api_key
 
 router = APIRouter()
 
+ALLOWED_API_KEYS = ["my-secret-key"]
 
 @router.post("/validate", response_model=ReportSchema)
 async def validate_endpoint(payload: InputSchema, request: Request):
-    """
-    Validate incoming payload and return a structured report.
-    """
-    rule_results: list[RuleResultSchema] = validate_data(payload.model_dump())
+    validate_api_key(request, allowed_keys=ALLOWED_API_KEYS)
 
-    total = len(rule_results)
-    passed = sum(1 for r in rule_results if r.status.lower() == "passed")
-    failed = total - passed
+    rule_results = validate_data(payload.model_dump())
 
-    summary = SummarySchema(total=total, passed=passed, failed=failed)
-    overall_status = "success" if failed == 0 else "failure"
-
-    return ReportSchema(
-        request_id=getattr(request.state, "correlation_id", ""),
-        overall_status=overall_status,
-        summary=summary,
-        results=rule_results
+    report = ReportBuilder.build_report(
+        rule_results,
+        request_id=getattr(request.state, "correlation_id", "")
     )
+
+    return report
