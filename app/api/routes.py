@@ -1,23 +1,18 @@
 from fastapi import APIRouter, Request
-from app.schemas.input import InputSchema
-from app.schemas.report import ReportSchema
-from app.services.validation import validate_data
+from typing import Dict, Any
+from app.schemas.report import ReportSchema, SummarySchema
+from app.rules.engine import RulesEngine
 from app.services.report_builder import ReportBuilder
-from app.core.security import validate_api_key
 
 router = APIRouter()
-
-ALLOWED_API_KEYS = ["my-secret-key"]
+engine = RulesEngine()
 
 @router.post("/validate", response_model=ReportSchema)
-async def validate_endpoint(payload: InputSchema, request: Request):
-    validate_api_key(request, allowed_keys=ALLOWED_API_KEYS)
+async def validate_endpoint(payload: Dict[str, Any], request: Request):
 
-    rule_results = validate_data(payload.model_dump())
+    rule_results = engine.run(payload)
 
-    report = ReportBuilder.build_report(
-        rule_results,
+    return ReportBuilder.build_report(
+        rule_results=rule_results,
         request_id=getattr(request.state, "correlation_id", "")
     )
-
-    return report

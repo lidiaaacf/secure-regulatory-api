@@ -1,14 +1,20 @@
+from app.schemas.report import ReportSchema, SummarySchema, RuleResultSchema
 from typing import List
-from app.schemas.report import RuleResultSchema, ReportSchema, SummarySchema
 
 class ReportBuilder:
+
     @staticmethod
     def build_report(rule_results: List[RuleResultSchema], request_id: str) -> ReportSchema:
         total = len(rule_results)
         passed = sum(1 for r in rule_results if r.status.lower() == "passed")
         failed = total - passed
 
-        summary = SummarySchema(total=total, passed=passed, failed=failed)
+        summary = SummarySchema(
+            total=total,
+            passed=passed,
+            failed=failed
+        )
+
         overall_status = "success" if failed == 0 else "failure"
 
         return ReportSchema(
