@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException, status
 from app.config import settings
-import re
+from typing import Any
 
 MAX_DEPTH = 20
 MAX_KEYS = 5000
@@ -13,46 +13,48 @@ def validate_api_key(request: Request):
             detail="Invalid API key"
         )
 
-def mask_sensitive_data(payload: dict, fields_to_mask: list[str]) -> dict:
-    masked = payload.copy()
-    for field in fields_to_mask:
-        if field in masked:
-            masked[field] = "***MASKED***"
-    return masked
-
-def get_depth(obj, level=0):
+def get_depth(obj: Any, level: int = 0) -> int:
     if isinstance(obj, dict):
         if not obj:
             return level
         return max(get_depth(v, level + 1) for v in obj.values())
+
     if isinstance(obj, list):
         if not obj:
             return level
         return max(get_depth(i, level + 1) for i in obj)
+
     return level
 
-
-def count_keys(obj):
+def count_keys(obj: Any) -> int:
     if isinstance(obj, dict):
         return len(obj) + sum(count_keys(v) for v in obj.values())
+
     if isinstance(obj, list):
         return sum(count_keys(i) for i in obj)
+
     return 0
 
-
-def contains_script_tags(obj):
-    pattern = re.compile(r"<script.*?>", re.IGNORECASE)
-    return pattern.search(str(obj)) is not None
-
-
-def run_security_checks(payload: dict):
+def run_structural_security_checks(payload: dict) -> str | None:
     if get_depth(payload) > MAX_DEPTH:
         return "Payload nesting too deep"
 
     if count_keys(payload) > MAX_KEYS:
         return "Payload too large"
 
-    if contains_script_tags(payload):
-        return "Script tag detected"
-
     return None
+
+def mask_sensitive_data(payload: Any, fields_to_mask: list[str]) -> Any:
+    if isinstance(payload, dict):
+        masked = {}
+        for key, value in payload.items():
+            if key.lower() in [f.lower() for f in fields_to_mask]:
+                masked[key] = "***MASKED***"
+            else:
+                masked[key] = mask_sensitive_data(value, fields_to_mask)
+        return masked
+
+    if isinstance(payload, list):
+        return [mask_sensitive_data(item, fields_to_mask) for item in payload]
+
+    return payload

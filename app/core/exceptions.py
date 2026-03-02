@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 def register_exception_handlers(app):
     """Register all API exception handlers."""
-
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         correlation_id = getattr(request.state, "correlation_id", None)
