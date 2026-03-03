@@ -36,6 +36,6 @@ def test_validate_endpoint_failure():
 
 def test_invalid_json():
     response = client.post(
-        "/validate", data="not json", headers={"x-api-key": "test-key"}
+        "/validate", content="not json", headers={"x-api-key": "test-key"}
     )
     assert response.status_code == 400
