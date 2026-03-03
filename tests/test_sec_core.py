@@ -1,7 +1,6 @@
 import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
-from starlette.datastructures import Headers
 
 from app.core.security import (
     validate_api_key,
