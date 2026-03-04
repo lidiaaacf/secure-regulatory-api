@@ -1,29 +1,16 @@
-from typing import List, Dict, Any
-from app.schemas.report import RuleResultSchema
-from app.rules.base import BaseRule
-
-from app.rules.business_rules import (
-    AmountMaxLimitRule,
-    EmailDomainRule,
-    NoEmptyStringsRule,
-    UserIdUUIDRule,
-)
-from app.rules.security_rules import (
-    NoSuspiciousKeysRule,
-    NoScriptInjectionRule,
-)
+from typing import Dict
+from app.contexts.base import ValidationContext, ValidationContextEnum
 
 
 class RulesEngine:
-    def __init__(self, rules: List[BaseRule] | None = None):
-        self.rules = rules or [
-            AmountMaxLimitRule(),
-            EmailDomainRule(),
-            NoEmptyStringsRule(),
-            UserIdUUIDRule(),
-            NoSuspiciousKeysRule(),
-            NoScriptInjectionRule(),
-        ]
+    def __init__(self):
+        self.contexts: Dict[str, ValidationContext] = {}
 
-    def run(self, payload: Dict[str, Any]) -> List[RuleResultSchema]:
-        return [rule.evaluate(payload) for rule in self.rules]
+    def register_context(self, context: ValidationContext):
+        self.contexts[context.name] = context
+
+    def run(self, payload: dict, context: ValidationContextEnum):
+        context_name = context.value
+        if context_name not in self.contexts:
+            raise ValueError(f"Unknown context: {context_name}")
+        return self.contexts[context_name].evaluate(payload)

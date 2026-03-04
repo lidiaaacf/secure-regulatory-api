@@ -1,9 +1,29 @@
+import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 from app.config import settings
-import pytest
+from app.rules.engine import RulesEngine
+from app.schemas.report import RuleResultSchema
+from app.contexts.base import ValidationContextEnum
 
-client = TestClient(app)
+
+@pytest.fixture
+def client():
+    with TestClient(app) as c:
+        engine = RulesEngine()
+
+        class FakeContext:
+            name = ValidationContextEnum.generic.value
+
+            def evaluate(self, payload):
+                return [
+                    RuleResultSchema(rule="dummy_rule", status="passed", severity="low")
+                ]
+
+        engine.register_context(FakeContext())
+        c.app.state.rules_engine = engine
+
+        yield c
 
 
 @pytest.fixture(autouse=True)
@@ -11,31 +31,64 @@ def setup_api_key(monkeypatch):
     monkeypatch.setattr(settings, "ALLOWED_API_KEYS", ["test-key"])
 
 
-def test_validate_endpoint_success():
-    payload = {
-        "payload": {
-            "amount": 5000,
-            "email": "user@company.com",
-            "user_id": "550e8400-e29b-41d4-a716-446655440000",
-        }
-    }
+def test_validate_endpoint_success(client):
+    payload = {"payload": {"amount": 5000}}
 
-    response = client.post("/validate", json=payload, headers={"x-api-key": "test-key"})
+    response = client.post(
+        f"/validate/{ValidationContextEnum.generic.value}",
+        json=payload,
+        headers={"x-api-key": "test-key"},
+    )
+
     assert response.status_code == 200
     data = response.json()
     assert data["overall_status"] == "success"
+    assert data["summary"]["passed"] == 1
 
 
-def test_validate_endpoint_failure():
-    payload = {"payload": {"password": "123", "amount": 20000}}
-    response = client.post("/validate", json=payload, headers={"x-api-key": "test-key"})
+def test_validate_endpoint_failure(client):
+    engine = RulesEngine()
+
+    class FailContext:
+        name = ValidationContextEnum.generic.value
+
+        def evaluate(self, payload):
+            return [
+                RuleResultSchema(rule="dummy_rule", status="failed", severity="high")
+            ]
+
+    engine.register_context(FailContext())
+    client.app.state.rules_engine = engine
+
+    payload = {"payload": {"amount": 20000}}
+
+    response = client.post(
+        f"/validate/{ValidationContextEnum.generic.value}",
+        json=payload,
+        headers={"x-api-key": "test-key"},
+    )
+
     assert response.status_code == 200
     data = response.json()
     assert data["overall_status"] == "failure"
+    assert data["summary"]["failed"] == 1
 
 
-def test_invalid_json():
+def test_invalid_json(client):
     response = client.post(
-        "/validate", content="not json", headers={"x-api-key": "test-key"}
+        f"/validate/{ValidationContextEnum.generic.value}",
+        content="not json",
+        headers={"x-api-key": "test-key"},
     )
+
     assert response.status_code == 400
+
+
+def test_invalid_api_key(client):
+    response = client.post(
+        f"/validate/{ValidationContextEnum.generic.value}",
+        json={"payload": {"amount": 500}},
+        headers={"x-api-key": "wrong-key"},
+    )
+
+    assert response.status_code == 401
