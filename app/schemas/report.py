@@ -7,6 +7,7 @@ class RuleResultSchema(BaseModel):
     status: str
     severity: str
     details: Optional[str] = None
+    impact: Optional[int] = None
 
 
 class SummarySchema(BaseModel):

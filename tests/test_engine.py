@@ -1,53 +1,65 @@
 from app.rules.engine import RulesEngine
+from types import SimpleNamespace
+import pytest
+
+
+def test_engine_register_context():
+    engine = RulesEngine()
+
+    class FakeContext:
+        name = "credit"
+
+        def evaluate(self, payload):
+            return []
+
+    engine.register_context(FakeContext())
+
+    assert "credit" in engine.contexts
 
 
 def test_engine_all_pass():
     engine = RulesEngine()
 
-    payload = {
-        "amount": 5000,
-        "email": "user@company.com",
-        "user_id": "550e8400-e29b-41d4-a716-446655440000",
-    }
+    class FakeContext:
+        name = "credit"
 
-    results = engine.run(payload)
+        def evaluate(self, payload):
+            return [SimpleNamespace(status="passed")]
+
+    engine.register_context(FakeContext())
+
+    fake_enum = SimpleNamespace(value="credit")
+
+    results = engine.run({"amount": 5000}, context=fake_enum)
 
     assert all(r.status == "passed" for r in results)
 
 
-def test_engine_amount_failure():
+def test_engine_unknown_context():
     engine = RulesEngine()
 
-    payload = {"amount": 20000}
+    fake_enum = SimpleNamespace(value="unknown")
 
-    results = engine.run(payload)
+    with pytest.raises(ValueError):
+        engine.run({}, context=fake_enum)
 
-    assert any(r.rule == "amount_max_limit" and r.status == "failed" for r in results)
 
-
-def test_engine_suspicious_key():
+def test_engine_calls_evaluate():
     engine = RulesEngine()
+    called = False
 
-    payload = {"password": "123456"}
+    class FakeContext:
+        name = "credit"
 
-    results = engine.run(payload)
+        def evaluate(self, payload):
+            nonlocal called
+            called = True
+            return []
 
-    assert any(r.rule == "no_suspicious_keys" and r.status == "failed" for r in results)
+    engine.register_context(FakeContext())
 
+    fake_enum = SimpleNamespace(value="credit")
 
-def test_engine_multiple_failures():
-    engine = RulesEngine()
+    engine.run({"a": 1}, context=fake_enum)
 
-    payload = {"password": "123", "amount": 20000, "name": ""}
-
-    results = engine.run(payload)
-
-    failed = [r for r in results if r.status == "failed"]
-
-    assert len(failed) >= 2
-
-
-def test_engine_rule_count():
-    engine = RulesEngine()
-
-    assert len(engine.rules) == 6
+    assert called is True
