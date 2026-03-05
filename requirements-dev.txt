@@ -4,6 +4,7 @@ anyio==4.12.1
 astroid==4.0.4
 Authlib==1.6.9
 bandit==1.9.4
+beautifulsoup4>=4.12.2
 black==26.1.0
 certifi==2026.2.25
 cffi==2.0.0

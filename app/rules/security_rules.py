@@ -1,29 +1,27 @@
 from typing import Any, Dict
 from app.rules.base import BaseRule
 from app.schemas.report import RuleResultSchema
-import re
+from bs4 import BeautifulSoup
 
 
 class NoScriptInjectionRule(BaseRule):
     name = "no_script_injection"
-    SCRIPT_PATTERN = re.compile(r"<script.*?>", re.IGNORECASE)
 
     def evaluate(self, payload: Dict[str, Any]) -> RuleResultSchema:
         found = False
 
         def scan(obj: Any):
             nonlocal found
-
             if isinstance(obj, dict):
                 for value in obj.values():
                     scan(value)
-
             elif isinstance(obj, list):
                 for item in obj:
                     scan(item)
-
             elif isinstance(obj, str):
-                if self.SCRIPT_PATTERN.search(obj):
+                # Parse HTML safely
+                soup = BeautifulSoup(obj, "html.parser")
+                if soup.find("script"):
                     found = True
 
         scan(payload)
