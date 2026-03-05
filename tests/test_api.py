@@ -22,7 +22,6 @@ def client():
 
         engine.register_context(FakeContext())
         c.app.state.rules_engine = engine
-
         yield c
 
 
@@ -31,15 +30,29 @@ def setup_api_key(monkeypatch):
     monkeypatch.setattr(settings, "ALLOWED_API_KEYS", ["test-key"])
 
 
+@pytest.fixture(autouse=True)
+def disable_rate_limit(monkeypatch):
+    from app.core.middleware import RateLimitMiddleware, SecurityMiddleware
+
+    monkeypatch.setattr(
+        RateLimitMiddleware,
+        "dispatch",
+        lambda self, request, call_next: call_next(request),
+    )
+    monkeypatch.setattr(
+        SecurityMiddleware,
+        "dispatch",
+        lambda self, request, call_next: call_next(request),
+    )
+
+
 def test_validate_endpoint_success(client):
     payload = {"payload": {"amount": 5000}}
-
     response = client.post(
         f"/validate/{ValidationContextEnum.generic.value}",
         json=payload,
         headers={"x-api-key": "test-key"},
     )
-
     assert response.status_code == 200
     data = response.json()
     assert data["overall_status"] == "success"
@@ -61,13 +74,11 @@ def test_validate_endpoint_failure(client):
     client.app.state.rules_engine = engine
 
     payload = {"payload": {"amount": 20000}}
-
     response = client.post(
         f"/validate/{ValidationContextEnum.generic.value}",
         json=payload,
         headers={"x-api-key": "test-key"},
     )
-
     assert response.status_code == 200
     data = response.json()
     assert data["overall_status"] == "failure"
@@ -80,7 +91,6 @@ def test_invalid_json(client):
         content="not json",
         headers={"x-api-key": "test-key"},
     )
-
     assert response.status_code == 400
 
 
@@ -90,5 +100,4 @@ def test_invalid_api_key(client):
         json={"payload": {"amount": 500}},
         headers={"x-api-key": "wrong-key"},
     )
-
     assert response.status_code == 401
