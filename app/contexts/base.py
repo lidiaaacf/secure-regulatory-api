@@ -8,6 +8,7 @@ from app.schemas.report import RuleResultSchema
 class ValidationContextEnum(str, Enum):
     generic = "generic"
     transaction = "transaction"
+    internal_api = "internal_api"
     kyc = "kyc"
 
 

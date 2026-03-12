@@ -22,6 +22,7 @@ def client():
 
         engine.register_context(FakeContext())
         c.app.state.rules_engine = engine
+
         yield c
 
 
@@ -31,16 +32,27 @@ def setup_api_key(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def disable_rate_limit(monkeypatch):
-    from app.core.middleware import RateLimitMiddleware, SecurityMiddleware
+def disable_middlewares(monkeypatch):
+    from app.core.middleware import (
+        RateLimitMiddleware,
+        SecurityMiddleware,
+        InternalAPIMiddleware,
+    )
 
     monkeypatch.setattr(
         RateLimitMiddleware,
         "dispatch",
         lambda self, request, call_next: call_next(request),
     )
+
     monkeypatch.setattr(
         SecurityMiddleware,
+        "dispatch",
+        lambda self, request, call_next: call_next(request),
+    )
+
+    monkeypatch.setattr(
+        InternalAPIMiddleware,
         "dispatch",
         lambda self, request, call_next: call_next(request),
     )
