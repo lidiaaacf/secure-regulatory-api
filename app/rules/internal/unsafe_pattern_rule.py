@@ -2,10 +2,7 @@ import re
 from app.rules.base import BaseRule
 from app.schemas.report import RuleResultSchema
 
-import re
-
 BLOCK_PATTERNS = [r"(select\s)", r"(drop\s)", r"<script>", r"\.\./"]
-
 
 class UnsafePatternRule(BaseRule):
 

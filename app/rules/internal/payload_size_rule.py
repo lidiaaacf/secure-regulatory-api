@@ -1,7 +1,5 @@
-from typing import Dict, Any
 from app.rules.base import BaseRule
 from app.schemas.report import RuleResultSchema
-
 
 class PayloadSizeRule(BaseRule):
 

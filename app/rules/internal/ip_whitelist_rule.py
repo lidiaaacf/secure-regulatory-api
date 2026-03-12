@@ -2,11 +2,6 @@ from typing import Dict, Any
 from app.rules.base import BaseRule
 from app.schemas.report import RuleResultSchema
 
-
-from typing import Dict, Any
-from app.rules.base import BaseRule
-from app.schemas.report import RuleResultSchema
-
 INTERNAL_IP_PREFIXES = ["10.", "192.168.", "172.16."]
 
 
