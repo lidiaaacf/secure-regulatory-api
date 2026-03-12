@@ -4,6 +4,7 @@ from app.schemas.report import RuleResultSchema
 
 BLOCK_PATTERNS = [r"(select\s)", r"(drop\s)", r"<script>", r"\.\./"]
 
+
 class UnsafePatternRule(BaseRule):
 
     name = "unsafe_pattern"

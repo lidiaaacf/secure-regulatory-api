@@ -1,6 +1,7 @@
 from app.rules.base import BaseRule
 from app.schemas.report import RuleResultSchema
 
+
 class PayloadSizeRule(BaseRule):
 
     name = "payload_size_check"
