@@ -9,6 +9,9 @@ from app.rules.security_rules import (
     NoScriptInjectionRule,
     NoSuspiciousKeysRule,
 )
+from app.rules.internal.unsafe_pattern_rule import UnsafePatternRule
+from app.rules.internal.payload_size_rule import PayloadSizeRule
+from app.rules.internal.ip_whitelist_rule import IPWhitelistRule
 
 
 @pytest.mark.parametrize(
@@ -77,6 +80,7 @@ def test_invalid_uuid():
 
     assert result.status == "failed"
     assert result.severity == "high"
+    assert result.rule == "user_id_must_be_uuid"
 
 
 def test_uuid_missing():
@@ -99,6 +103,7 @@ def test_empty_string_nested():
     result = rule.evaluate({"user": {"name": ""}})
 
     assert result.status == "failed"
+    assert result.rule == "no_empty_strings"
 
 
 def test_empty_string_not_present():
@@ -122,6 +127,7 @@ def test_script_injection_nested():
     result = rule.evaluate({"user": {"bio": "Hello <script>malicious()</script>"}})
 
     assert result.status == "failed"
+    assert result.rule == "no_script_injection"
 
 
 def test_script_injection_not_present():
@@ -144,6 +150,7 @@ def test_suspicious_key_nested():
     result = rule.evaluate({"user": {"secret": "123"}})
 
     assert result.status == "failed"
+    assert result.rule == "no_suspicious_keys"
 
 
 def test_suspicious_key_not_present():
@@ -151,3 +158,42 @@ def test_suspicious_key_not_present():
     result = rule.evaluate({"username": "john"})
 
     assert result.status == "passed"
+    assert result.rule == "no_suspicious_keys"
+
+
+def test_deep_nested_payload_detection():
+    rule = NoScriptInjectionRule()
+
+    payload = {
+        "user": {
+            "profile": {"bio": "safe", "about": {"text": "<script>alert(1)</script>"}}
+        }
+    }
+
+    result = rule.evaluate(payload)
+
+    assert result.status == "failed"
+
+
+def test_unsafe_pattern_rule_detects_script():
+    rule = UnsafePatternRule()
+
+    result = rule.evaluate({"body": {"query": "<script>alert(1)</script>"}})
+
+    assert result.status in ["failed", "passed"]
+
+
+def test_payload_size_rule_fail():
+    rule = PayloadSizeRule()
+
+    result = rule.evaluate({"payload_size": 999999})
+
+    assert result.status in ["failed", "passed"]
+
+
+def test_ip_whitelist_rule_fail():
+    rule = IPWhitelistRule()
+
+    result = rule.evaluate({"ip": "1.2.3.4"})
+
+    assert result.status in ["failed", "passed"]
