@@ -17,6 +17,7 @@ class PayloadSizeRule(BaseRule):
 
         return RuleResultSchema(
             rule=self.name,
-            passed=passed,
+            status="passed" if passed else "failed",
+            severity="low" if passed else "high",
             message="Payload size ok" if passed else "Payload too large",
         )

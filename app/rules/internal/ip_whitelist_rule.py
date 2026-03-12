@@ -22,6 +22,7 @@ class IPWhitelistRule(BaseRule):
 
         return RuleResultSchema(
             rule=self.name,
-            passed=allowed,
+            status="passed" if allowed else "failed",
+            severity="low" if allowed else "high",
             message="Internal IP verified" if allowed else "External IP blocked",
         )

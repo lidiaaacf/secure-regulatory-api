@@ -19,8 +19,14 @@ class UnsafePatternRule(BaseRule):
             if re.search(pattern, text, re.IGNORECASE):
                 return RuleResultSchema(
                     rule=self.name,
-                    passed=False,
+                    status="failed",
+                    severity="critical",
                     message=f"Unsafe pattern detected: {pattern}",
                 )
 
-        return RuleResultSchema(rule=self.name, passed=True, message="Payload safe")
+        return RuleResultSchema(
+            rule=self.name,
+            status="passed",
+            severity="low",
+            message="No unsafe patterns detected",
+        )
